@@ -1,130 +1,71 @@
-#define TRIG_PIN 15
-#define ECHO_PIN 2
-#define LED_VERDE 19
-#define LED_AMARILLO 17
-#define LED_ROJO 5
-#define LED_INDICADOR 33
+int pinLedVerde = 2;       // LED verde en pin 2
+int pinLedAmarillo = 4;    // LED amarillo en pin 4
+int pinLedRojo = 5;        // LED rojo en pin 5
+int pinLedParpadeo = 19;   // LED de parpadeo en el pin 19
+int pinEco = 12;
+int pinGatillo = 13;
 
-class UltrasonicSensor {
-  private:
-    int trigPin;
-    int echoPin;
-    long duration;
-    float distance;
+int contador = 0;
+int umbralDistancia = 10;  // Distancia para detectar el paso de un objeto
+bool objetoDetectado = false;
 
-  public:
-    UltrasonicSensor(int trig, int echo) {
-      trigPin = trig;
-      echoPin = echo;
-      pinMode(trigPin, OUTPUT);
-      pinMode(echoPin, INPUT);
-    }
-
-    float getDistance() {
-      // Envía un pulso de 10 microsegundos para activar el sensor
-      digitalWrite(trigPin, LOW);
-      delayMicroseconds(2);
-      digitalWrite(trigPin, HIGH);
-      delayMicroseconds(10);
-      digitalWrite(trigPin, LOW);
-
-      // Lee el tiempo de respuesta del sensor
-      duration = pulseIn(echoPin, HIGH);
-
-      // Calcula la distancia en centímetros
-      distance = (duration / 2.0) * 0.0344;
-      return distance;
-    }
-};
-
-class LEDController {
-  private:
-    int greenLED;
-    int yellowLED;
-    int redLED;
-    int indicatorLED;
-
-  public:
-    LEDController(int green, int yellow, int red, int indicator) {
-      greenLED = green;
-      yellowLED = yellow;
-      redLED = red;
-      indicatorLED = indicator;
-
-      pinMode(greenLED, OUTPUT);
-      pinMode(yellowLED, OUTPUT);
-      pinMode(redLED, OUTPUT);
-      pinMode(indicatorLED, OUTPUT);
-      
-      // Apagar todos los LEDs al inicio
-      digitalWrite(greenLED, LOW);
-      digitalWrite(yellowLED, LOW);
-      digitalWrite(redLED, LOW);
-      digitalWrite(indicatorLED, LOW);
-    }
-
-    void setIndicator(bool state) {
-      digitalWrite(indicatorLED, state ? HIGH : LOW);
-    }
-
-    void updateLEDs(int objectCount) {
-      if (objectCount < 5) {
-        digitalWrite(greenLED, HIGH);
-        digitalWrite(yellowLED, LOW);
-        digitalWrite(redLED, LOW);
-      } else if (objectCount < 10) {
-        digitalWrite(greenLED, LOW);
-        digitalWrite(yellowLED, HIGH);
-        digitalWrite(redLED, LOW);
-      } else {
-        digitalWrite(greenLED, LOW);
-        digitalWrite(yellowLED, LOW);
-        digitalWrite(redLED, HIGH);
-      }
-    }
-};
-
-class ObjectCounter {
-  private:
-    UltrasonicSensor& sensor;
-    LEDController& ledController;
-    int objectCount;
-    float lastDistance;
-
-  public:
-    ObjectCounter(UltrasonicSensor& sensorObj, LEDController& ledCtrl) 
-      : sensor(sensorObj), ledController(ledCtrl), objectCount(0), lastDistance(0) {}
-
-    void update() {
-      float distance = sensor.getDistance();
-      Serial.print("Distancia: ");
-      Serial.print(distance);
-      Serial.println(" cm");
-
-      if (lastDistance > 10 && distance <= 10) {
-        objectCount++;
-        Serial.print("Objetos contados: ");
-        Serial.println(objectCount);
-        ledController.setIndicator(true);
-      } else if (distance > 10) {
-        ledController.setIndicator(false);
-      }
-
-      ledController.updateLEDs(objectCount);
-      lastDistance = distance;
-    }
-};
-
-// Declaración de instancias globales
-UltrasonicSensor sensor(TRIG_PIN, ECHO_PIN);
-LEDController ledController(LED_VERDE, LED_AMARILLO, LED_ROJO, LED_INDICADOR);
-ObjectCounter objectCounter(sensor, ledController);
+long readUltrasonicDistance(int triggerPin, int echoPin) {
+  pinMode(triggerPin, OUTPUT);
+  digitalWrite(triggerPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(triggerPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(triggerPin, LOW);
+  pinMode(echoPin, INPUT);
+  
+  return pulseIn(echoPin, HIGH);
+}
 
 void setup() {
   Serial.begin(115200);
+  pinMode(pinLedVerde, OUTPUT);
+  pinMode(pinLedAmarillo, OUTPUT);
+  pinMode(pinLedRojo, OUTPUT);
+  pinMode(pinLedParpadeo, OUTPUT);  // Configura el pin 19 para el nuevo LED
+
+  // Asegurarse de que todos los LEDs estén apagados al inicio
+  digitalWrite(pinLedVerde, LOW);
+  digitalWrite(pinLedAmarillo, LOW);
+  digitalWrite(pinLedRojo, LOW);
 }
 
 void loop() {
-  objectCounter.update();
-  delay(200);
+  int distancia = 0.01723 * readUltrasonicDistance(pinGatillo, pinEco);
+  Serial.println(distancia);
+  
+  if (distancia < umbralDistancia && !objetoDetectado) {
+    objetoDetectado = true;  // Detecta que un objeto ha pasado
+    contador++;
+    Serial.print("Contador de objetos: ");
+    Serial.println(contador);
+
+    // Hacer parpadear el LED al detectar un objeto
+    for (int i = 0; i < 3; i++) {  // Parpadea 3 veces
+      digitalWrite(pinLedParpadeo, HIGH);
+      delay(200);
+      digitalWrite(pinLedParpadeo, LOW);
+      delay(200);
+    }
+  } else if (distancia >= umbralDistancia) {
+    objetoDetectado = false;  // Resetea la detección para el próximo objeto
+  }
+
+  // Encender los LEDs progresivamente según el contador
+  if (contador >= 5 && contador < 10) {
+    digitalWrite(pinLedVerde, HIGH);   // Enciende el LED verde al contar 5 objetos
+  } else if (contador >= 10 && contador < 15) {
+    digitalWrite(pinLedVerde, HIGH);
+    digitalWrite(pinLedAmarillo, HIGH); // Enciende el LED amarillo al contar 10 objetos
+  } else if (contador >= 15) {
+    digitalWrite(pinLedVerde, HIGH);
+    digitalWrite(pinLedAmarillo, HIGH);
+    digitalWrite(pinLedRojo, HIGH);     // Enciende el LED rojo al contar 15 objetos
+  }
+
+  delay(100);
 }
