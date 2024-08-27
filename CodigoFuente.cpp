@@ -1,3 +1,4 @@
+
 class ContadorObjetos {
   private:
     int pinLedVerde;
@@ -22,20 +23,22 @@ class ContadorObjetos {
       return pulseIn(pinEco, HIGH);
     }
 
+
     void actualizarLEDs() {
       if (contador >= 5 && contador < 10) {
-        digitalWrite(pinLedVerde, HIGH);   // Enciende el LED verde al contar 5 objetos
+        digitalWrite(pinLedVerde, HIGH);   
       } else if (contador >= 10 && contador < 15) {
         digitalWrite(pinLedVerde, HIGH);
-        digitalWrite(pinLedAmarillo, HIGH); // Enciende el LED amarillo al contar 10 objetos
+        digitalWrite(pinLedAmarillo, HIGH); 
       } else if (contador >= 15) {
         digitalWrite(pinLedVerde, HIGH);
         digitalWrite(pinLedAmarillo, HIGH);
-        digitalWrite(pinLedRojo, HIGH);     // Enciende el LED rojo al contar 15 objetos
+        digitalWrite(pinLedRojo, HIGH);     
       }
     }
 
   public:
+   
     ContadorObjetos(int verde, int amarillo, int rojo, int parpadeo, int eco, int gatillo, int umbral) {
       pinLedVerde = verde;
       pinLedAmarillo = amarillo;
@@ -52,7 +55,6 @@ class ContadorObjetos {
       pinMode(pinLedRojo, OUTPUT);
       pinMode(pinLedParpadeo, OUTPUT);
 
-      // Asegurarse de que todos los LEDs estén apagados al inicio
       digitalWrite(pinLedVerde, LOW);
       digitalWrite(pinLedAmarillo, LOW);
       digitalWrite(pinLedRojo, LOW);
@@ -63,12 +65,12 @@ class ContadorObjetos {
       Serial.println(distancia);
 
       if (distancia < umbralDistancia && !objetoDetectado) {
-        objetoDetectado = true;  // Detecta que un objeto ha pasado
+        objetoDetectado = true; 
         contador++;
         Serial.print("Contador de objetos: ");
         Serial.println(contador);
 
-        // Hacer parpadear el LED al detectar un objeto
+   
         for (int i = 0; i < 3; i++) {  // Parpadea 3 veces
           digitalWrite(pinLedParpadeo, HIGH);
           delay(200);
@@ -76,12 +78,26 @@ class ContadorObjetos {
           delay(200);
         }
 
-        actualizarLEDs();
+        actualizarLEDs();  // Actualiza el estado de los LEDs según el contador
       } else if (distancia >= umbralDistancia) {
         objetoDetectado = false;  // Resetea la detección para el próximo objeto
       }
     }
+
+ 
+    void reiniciarContador() {
+      contador = 0;
+      objetoDetectado = false;
+      digitalWrite(pinLedVerde, LOW);
+      digitalWrite(pinLedAmarillo, LOW);
+      digitalWrite(pinLedRojo, LOW);
+    }
+
+    int obtenerContador() {
+      return contador;
+    }
 };
+
 
 ContadorObjetos contador(2, 4, 5, 19, 12, 13, 10);
 
